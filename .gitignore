@@ -1,0 +1,23 @@
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+
+.venv/
+venv/
+env/
+
+.env
+.env.local
+
+# faster-whisper model cache (downloaded on first run)
+.cache/
+whisper_models/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Editor
+.vscode/
+.idea/

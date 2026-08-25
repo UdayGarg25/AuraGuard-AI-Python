@@ -1,0 +1,58 @@
+{
+  "_comment": "Lightweight first-level filter — not the final decision. Matches here only trigger Gemini for contextual analysis; they never flag content by themselves. Update freely; no code changes needed. General profanity/curse words are NOT listed here — that's covered comprehensively by the better_profanity library's built-in dictionary (see keyword_filter.py). This file only owns things a generic profanity dictionary won't have: threat/violence/harassment phrases and mild non-swear insults.",
+  "violent_words": [
+    "kill",
+    "murder",
+    "stab",
+    "shoot",
+    "shooting",
+    "strangle",
+    "choke",
+    "beat you up",
+    "bomb",
+    "gun",
+    "knife you",
+    "slit your throat",
+    "burn you",
+    "violent",
+    "violence",
+    "attack",
+    "assault",
+    "weapon"
+  ],
+  "threatening_phrases": [
+    "i will kill you",
+    "i'll kill you",
+    "i will hurt you",
+    "i'll hurt you",
+    "i will find you",
+    "i'll find you",
+    "you are dead",
+    "you're dead",
+    "i will destroy you",
+    "watch your back",
+    "you won't survive",
+    "i know where you live",
+    "i will end you"
+  ],
+  "abusive_words": [
+    "idiot",
+    "moron",
+    "stupid",
+    "worthless",
+    "pathetic",
+    "loser",
+    "shut up",
+    "shut your mouth",
+    "you disgust me"
+  ],
+  "harassment_terms": [
+    "stalk you",
+    "stalking you",
+    "creep on you",
+    "following you home",
+    "send you nudes",
+    "show me your body",
+    "i'm watching you"
+  ]
+}
