@@ -1,0 +1,8 @@
+.venv/
+venv/
+__pycache__/
+*.pyc
+.env
+models/*.pt
+!models/.gitkeep
+.pytest_cache/

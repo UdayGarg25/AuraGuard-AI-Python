@@ -1,0 +1,10 @@
+fastapi==0.141.1
+uvicorn[standard]==0.52.4
+ultralytics==8.4.126
+python-multipart==0.0.32
+pydantic-settings==2.15.0
+Pillow==12.3.0
+numpy==2.5.2
+
+# Only used by tests/test_detect_manual.py, not by the service itself
+requests==2.34.2
