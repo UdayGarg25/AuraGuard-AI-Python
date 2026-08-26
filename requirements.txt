@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 fastapi==0.141.1
 uvicorn[standard]==0.52.4
 ultralytics==8.4.126
@@ -8,3 +9,27 @@ numpy==2.5.2
 
 # Only used by tests/test_detect_manual.py, not by the service itself
 requests==2.34.2
+=======
+fastapi==0.115.6
+uvicorn[standard]==0.34.0
+pydantic==2.10.4
+pydantic-settings==2.7.1
+python-dotenv==1.0.1
+python-multipart==0.0.20
+
+# Speech-to-text — runs fully locally, no API key/network required.
+# See speech/README.md for why faster-whisper was chosen.
+faster-whisper==1.1.0
+
+# Broad profanity/abusive-language dictionary (thousands of words) for the
+# keyword filter — see speech/keyword_filter.py.
+better-profanity==0.7.0
+
+# Gemini 2.5 Flash Lite — used ONLY for contextual analysis of text that
+# already passed the local keyword filter. See speech/gemini_service.py.
+google-generativeai==0.8.3
+
+# Test tooling
+pytest==8.3.4
+pytest-asyncio==0.25.0
+>>>>>>> 17be8b7e69e313c2f86f52b4ec38b09a11381391
