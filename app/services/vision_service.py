@@ -24,6 +24,7 @@ from ultralytics import YOLO
 
 from app.core.config import get_settings
 from app.core.logging import detection_logger, vision_logger, yolo_logger
+from app.services import camera_visibility_service, explicit_content_service
 
 settings = get_settings()
 
@@ -86,6 +87,11 @@ def load_models() -> None:
             "No YOLO_FACE_MODEL_PATH configured — faceCount/multipleFaces will "
             "report 'MODEL SUPPORT REQUIRED / NOT YET IMPLEMENTED'"
         )
+
+    # Explicit-content detection is a separate, optional model — a failure or
+    # a disabled config here must never prevent YOLO (already loaded above)
+    # from serving requests. load_model() itself never raises.
+    explicit_content_service.load_model()
 
 
 def is_ready() -> bool:
@@ -166,6 +172,7 @@ def run_detection(raw_bytes: bytes) -> dict:
     detection_logger.info(
         f"Frame result: {len(objects)} object(s) — personCount={person_count}, phoneDetected={phone_detected}"
     )
+    detection_logger.info(f"[YOLO] persons={person_count} phone={phone_detected}")
 
     face_count = None
     multiple_faces = None
@@ -173,7 +180,25 @@ def run_detection(raw_bytes: bytes) -> dict:
         face_count, multiple_faces = _run_face_model(image_array)
         detection_logger.info(f"Face model result: faceCount={face_count}, multipleFaces={multiple_faces}")
 
+    # Both reuse the SAME decoded frame already used by YOLO above — no
+    # second decode, no second upload, no extra frame ever touches disk.
+    # Each is independently guarded so a failure in either can never affect
+    # YOLO's already-computed result or crash this request.
+    try:
+        explicit_result = explicit_content_service.analyze(image_array)
+    except Exception as exc:  # noqa: BLE001 - belt-and-suspenders; analyze() already catches internally
+        yolo_logger.error(f"Unexpected error calling explicit-content detector: {exc}")
+        explicit_result = {"status": "error", "flagged": False, "confidence": None}
+
+    try:
+        camera_visibility_result = camera_visibility_service.analyze(image_array)
+    except Exception as exc:  # noqa: BLE001
+        yolo_logger.error(f"Unexpected error calling camera-visibility detector: {exc}")
+        camera_visibility_result = {"status": "uncertain", "confidence": 0.0}
+
     processing_time_ms = (time.perf_counter() - start) * 1000
+
+    vision_logger.info(f"Detection completed ({round(processing_time_ms, 1)}ms)")
 
     return {
         "detections": {
@@ -182,18 +207,24 @@ def run_detection(raw_bytes: bytes) -> dict:
             "phoneConfidence": round(phone_confidence, 4) if phone_confidence is not None else None,
             "faceCount": face_count,
             "multipleFaces": multiple_faces,
-            # Neither has a COCO class or any general-purpose YOLO equivalent
-            # — see README.md. Not approximated with a brightness/heuristic
-            # check per explicit project requirement.
-            "cameraCovered": None,
-            "explicitContent": "not_available",
+            # Not a YOLO class — see camera_visibility_service.py. A
+            # heuristic image-quality/visibility signal, not object detection.
+            "cameraCovered": camera_visibility_result,
+            # Not YOLO either — see explicit_content_service.py. A separate,
+            # purpose-built local NSFW classifier (NudeNet), gated behind
+            # its own confidence threshold and enable/disable config.
+            "explicitContent": explicit_result,
         },
         "modelSupport": {
             "personDetection": "implemented",
             "phoneDetection": "implemented",
             "faceDetection": "implemented" if _face_model is not None else "MODEL SUPPORT REQUIRED / NOT YET IMPLEMENTED",
-            "cameraCovered": "MODEL SUPPORT REQUIRED / NOT YET IMPLEMENTED",
-            "explicitContent": "MODEL SUPPORT REQUIRED / NOT YET IMPLEMENTED",
+            "cameraCovered": "implemented (heuristic image-quality analysis, not a YOLO class)",
+            "explicitContent": (
+                "implemented (NudeNet, local ONNX classifier)"
+                if explicit_content_service.is_ready()
+                else "MODEL SUPPORT REQUIRED / NOT YET IMPLEMENTED"
+            ),
         },
         "objects": objects,
         "model": settings.yolo_model,

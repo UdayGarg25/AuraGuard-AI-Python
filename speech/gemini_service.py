@@ -71,12 +71,30 @@ def _extract_json(raw: str) -> dict:
     return json.loads(cleaned)
 
 
-def _fallback_result(reason: str) -> GeminiAnalysis:
+# Rule-based severity/type used ONLY when Gemini's own judgment isn't
+# available (no API key configured, or the call fails) — mirrors
+# keyword_filter.py's own CATEGORY_ORDER priority (threats are checked
+# first/outrank everything else, profanity is the mildest, generic bucket).
+# Without this, every fallback used to hardcode severity="low" regardless of
+# category, silently discarding the keyword filter's own signal.
+_CATEGORY_FALLBACK: dict[str, tuple[ViolationType, str]] = {
+    "threatening_phrases": ("violence", "high"),
+    "violent_words": ("violence", "medium"),
+    "harassment_terms": ("harassment", "medium"),
+    "abusive_words": ("abusive_language", "medium"),
+    "profanity": ("abusive_language", "low"),
+}
+
+
+def _fallback_result(reason: str, matched_category: str | None = None) -> GeminiAnalysis:
     # Fails closed-but-cautious: if Gemini is unreachable or returns
-    # something unparseable, we can't confirm safety, so we surface a
-    # low-confidence flag for human review rather than silently dropping it
-    # (the keyword filter already told us this text was suspicious).
-    return GeminiAnalysis(flagged=True, type="other", severity="low", confidence=0.0, reason=reason)
+    # something unparseable, we can't confirm safety, so we surface a flag
+    # for human review rather than silently dropping it (the keyword filter
+    # already told us this text was suspicious) — using the matched
+    # category's own rule-based severity rather than a flat "low" for every
+    # match regardless of how serious the matched category actually is.
+    fallback_type, fallback_severity = _CATEGORY_FALLBACK.get(matched_category, ("other", "low"))
+    return GeminiAnalysis(flagged=True, type=fallback_type, severity=fallback_severity, confidence=0.0, reason=reason)
 
 
 def analyze_with_gemini(text: str, matched_category: str | None) -> GeminiAnalysis:
@@ -84,7 +102,7 @@ def analyze_with_gemini(text: str, matched_category: str | None) -> GeminiAnalys
 
     if not settings.gemini_api_key:
         logger.warning("GEMINI_API_KEY not set — skipping contextual analysis")
-        return _fallback_result("Gemini API key not configured; flagged for manual review.")
+        return _fallback_result("Gemini API key not configured; using rule-based severity.", matched_category)
 
     try:
         genai.configure(api_key=settings.gemini_api_key)
@@ -109,4 +127,6 @@ def analyze_with_gemini(text: str, matched_category: str | None) -> GeminiAnalys
         )
     except Exception as error:  # noqa: BLE001 — a bad/unreachable LLM call must never crash the pipeline
         logger.error("Gemini analysis failed: %s", error)
-        return _fallback_result(f"Gemini call failed ({error.__class__.__name__}); flagged for manual review.")
+        return _fallback_result(
+            f"Gemini call failed ({error.__class__.__name__}); using rule-based severity.", matched_category
+        )

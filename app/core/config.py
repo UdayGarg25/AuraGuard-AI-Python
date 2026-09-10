@@ -43,6 +43,42 @@ class Settings(BaseSettings):
     # different trained weights.
     yolo_face_model_path: Optional[str] = None
 
+    # --- Explicit-content detection ----------------------------------------
+    # YOLOv8n has no NSFW-related class and was never trained for this task —
+    # using it here would be exactly the "pretend the model supports what it
+    # wasn't trained for" mistake this project explicitly rejects. This uses
+    # a separate, purpose-built local classifier (NudeNet, see
+    # app/services/explicit_content_service.py) instead. Runs fully offline —
+    # its checkpoint ships inside the `nudenet` pip package itself, no
+    # separate download and no third-party API call.
+    #
+    # A kill-switch, not just a threshold: explicit-content flags are
+    # sensitive enough that an operator should be able to disable this
+    # detector entirely via one env var without touching code.
+    explicit_content_enabled: bool = True
+    # Higher than YOLO's general confidence_threshold (0.5) on purpose — a
+    # false positive here is more consequential than an extra "cell phone"
+    # box, so this defaults more conservative.
+    explicit_content_confidence_threshold: float = 0.6
+
+    # --- Camera-covered / visibility detection ------------------------------
+    # NOT a YOLO class — there is no "covered camera" object to detect.
+    # This is a heuristic image-quality/visibility analysis (see
+    # app/services/camera_visibility_service.py) run on the same decoded
+    # frame, using multiple signals together so a merely dark room is never
+    # confused with a physically blocked lens.
+    #
+    # Mean grayscale brightness (0-255) below this is "dark" — on its own,
+    # NOT sufficient evidence of a covered camera (a dark room is normal).
+    camera_visibility_dark_threshold: float = 20.0
+    # Pixel-value standard deviation below this means the frame is close to
+    # a single flat, uniform color — the signature of something pressed
+    # directly against the lens, at ANY brightness level.
+    camera_visibility_flat_stddev_threshold: float = 10.0
+    # Laplacian variance (a standard blur/edge-detail measure) below this
+    # means almost no real detail/edges are visible anywhere in the frame.
+    camera_visibility_flat_detail_threshold: float = 15.0
+
     # --- Request limits -----------------------------------------------------
     max_image_size_mb: float = 10.0
 

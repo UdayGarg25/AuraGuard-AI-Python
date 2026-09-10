@@ -1,22 +1,29 @@
-<<<<<<< HEAD
+# Shared by both services in this repo (app/ vision, speech/ speech) — kept
+# at the versions already validated for the vision service, since those are
+# newer/compatible supersets of what speech/ needs.
 fastapi==0.141.1
 uvicorn[standard]==0.52.4
-ultralytics==8.4.126
-python-multipart==0.0.32
 pydantic-settings==2.15.0
+python-multipart==0.0.32
+python-dotenv==1.0.1
+
+# --- Vision service (app/) — YOLO object detection ------------------------
+ultralytics==8.4.126
 Pillow==12.3.0
 numpy==2.5.2
+opencv-python==5.0.0.93
 
 # Only used by tests/test_detect_manual.py, not by the service itself
 requests==2.34.2
-=======
-fastapi==0.115.6
-uvicorn[standard]==0.34.0
-pydantic==2.10.4
-pydantic-settings==2.7.1
-python-dotenv==1.0.1
-python-multipart==0.0.20
 
+# Explicit-content detection — a local NSFW classifier (NOT YOLO; YOLOv8n has
+# no such class). Ships its own ONNX checkpoint inside the package, no
+# separate download and no external API. See
+# app/services/explicit_content_service.py for why this was chosen over
+# opennsfw2 (which needs a whole second deep-learning framework, TensorFlow).
+nudenet==3.4.2
+
+# --- Speech service (speech/) — Whisper STT + keyword filter + Gemini -----
 # Speech-to-text — runs fully locally, no API key/network required.
 # See speech/README.md for why faster-whisper was chosen.
 faster-whisper==1.1.0
@@ -32,4 +39,3 @@ google-generativeai==0.8.3
 # Test tooling
 pytest==8.3.4
 pytest-asyncio==0.25.0
->>>>>>> 17be8b7e69e313c2f86f52b4ec38b09a11381391

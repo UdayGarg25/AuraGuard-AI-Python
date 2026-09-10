@@ -185,10 +185,11 @@ uv run python scripts/test_speech_cli.py --audio path/to/chunk.wav
 Prints every stage: transcribed text → keyword match + category → whether Gemini was called →
 Gemini's raw result → final structured result.
 
-**HTTP** (once the server's running — `uv run uvicorn main:app --reload`):
+**HTTP** (once the server's running — `uv run uvicorn main:app --reload --port 8001`; the vision
+service already uses port 8000, so both can run at the same time):
 
 ```bash
-curl -X POST http://localhost:8000/api/v1/analyze/text \
+curl -X POST http://localhost:8001/api/v1/analyze/text \
   -H "Content-Type: application/json" \
   -d '{"meetingId":"m1","userId":"u1","text":"I will kill you"}'
 ```

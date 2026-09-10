@@ -15,7 +15,9 @@ class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
     host: str = "0.0.0.0"
-    port: int = 8000
+    # 8001, not 8000 — the vision service (app/main.py) already runs on 8000
+    # (see README.md). Both must be able to run at the same time.
+    port: int = 8001
 
     # Gemini — contextual analysis only, never the primary STT.
     gemini_api_key: str = ""

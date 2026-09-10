@@ -31,7 +31,9 @@ import tempfile
 from functools import lru_cache
 from pathlib import Path
 
+import numpy as np
 from faster_whisper import WhisperModel
+from faster_whisper.audio import decode_audio
 
 from config import get_settings
 
@@ -69,7 +71,26 @@ def transcribe_audio_bytes(audio_bytes: bytes, suffix: str = ".wav") -> str:
         tmp_path = Path(tmp.name)
 
     try:
-        segments, _info = model.transcribe(str(tmp_path), beam_size=1, vad_filter=True)
+        # TEMPORARY diagnostics: decode once ourselves so we can measure what
+        # actually arrived (duration + real amplitude), independent of
+        # whether Whisper/VAD later decides there's "no speech". This proves
+        # or rules out "the problem is upstream of Python" definitively.
+        # transcribe() also accepts the decoded array directly, so this
+        # doesn't cost a second decode.
+        audio_array = decode_audio(str(tmp_path))
+        duration_s = len(audio_array) / 16000
+        peak = float(np.max(np.abs(audio_array))) if len(audio_array) else 0.0
+        rms = float(np.sqrt(np.mean(np.square(audio_array)))) if len(audio_array) else 0.0
+        logger.info(
+            "[DIAG] Decoded audio: duration=%.2fs samples=%d peak=%.5f rms=%.5f — %s",
+            duration_s,
+            len(audio_array),
+            peak,
+            rms,
+            "DEAD SILENCE (received by Python)" if peak < 0.001 else "real signal present",
+        )
+
+        segments, _info = model.transcribe(audio_array, beam_size=1, vad_filter=True)
         return " ".join(segment.text.strip() for segment in segments).strip()
     except Exception as error:  # noqa: BLE001 — a malformed/truncated/corrupt
         # chunk (real-world possibility with live network audio) must never
