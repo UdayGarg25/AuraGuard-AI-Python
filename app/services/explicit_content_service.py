@@ -108,6 +108,13 @@ def analyze(image_array: np.ndarray) -> dict:
         detections = _detector.detect(bgr_array)
 
         threshold = settings.explicit_content_confidence_threshold
+        # TEMP DEBUG: raw NudeNet counts only (no image data) to tell apart
+        # "detected nothing" from "detected something below threshold".
+        raw_max = max((d.get("score", 0.0) for d in detections), default=0.0)
+        logger.info(
+            f"[Explicit][debug] modelLoaded={is_ready()} rawDetections={len(detections)} "
+            f"rawMaxScore={round(raw_max, 4)} threshold={threshold}"
+        )
         matches = [
             d for d in detections if d.get("class") in _EXPLICIT_LABELS and d.get("score", 0.0) >= threshold
         ]
